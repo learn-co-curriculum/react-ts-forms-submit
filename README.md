@@ -10,9 +10,7 @@
 In this lesson, we'll discuss how to handle form submission in React.
 
 If you want to code along there is starter code in the `src` folder. Make sure
-to run `npm install && npm start` to see the code in the browser. There will be
-some TypeScript errors upon running it the first time, but we will fix them
-throughout the code along.
+to run `npm install && npm start` to see the code in the browser.
 
 ## Submitting a Controlled Form
 
@@ -37,20 +35,21 @@ function will be called. We don't have the `handleSubmit` function yet, so let's
 write it out:
 
 ```jsx
+// src/components/Form.js
 function handleSubmit(event) {
   event.preventDefault();
   const formData = {
     firstName: firstName,
     lastName: lastName,
   };
-  props.sendFormDataSomewhereb(formData);
+  props.sendFormDataSomewhere(formData);
   setFirstName("");
   setLastName("");
 }
 ```
 
 We're missing something though - the typing for the `event` parameter.
-TypeScript rightfully doesn't like that it default to the `any` type, so let's
+TypeScript rightfully doesn't like that it defaults to the `any` type, so let's
 change that. We can use the IDE trick we learned to figure out what umbrella
 type the `onSubmit` event falls under. Hover over the `onSubmit` attribute in
 the JSX, and we should find that it's a `React.FormEvent` on an
@@ -59,6 +58,7 @@ the JSX, and we should find that it's a `React.FormEvent` on an
 Let's type the parameter like so:
 
 ```ts
+// src/components/Form.js
 function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
   // ...
 }
@@ -99,6 +99,7 @@ which case you would need to access the input fields from the DOM instead of
 accessing the values from state:
 
 ```jsx
+// src/components/Form.js
 function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
   event.preventDefault();
   // in an uncontrolled form, you need to access the input fields from the DOM
@@ -111,16 +112,19 @@ function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
 ```
 
 Since we don't have a server to send our data to, let's remove our
-`sendFormDataSomewhere()` function, the `props` parameter, and the `Props`
-interface. Instead, we'll demonstrate submission by modifying our `Form`
-component to access submitted values from state and list them in the DOM:
+`sendFormDataSomewhere()` function, the `Form` component's `props` parameter,
+and the `Props` interface. Instead, we'll demonstrate submission by modifying
+our `Form` component to access submitted values from state and list them in the
+DOM:
 
 ```jsx
+// src/components/Form.js
 import { useState } from "react";
 
-function Form() {
+function Form() { /* code change, remove props */
   const [firstName, setFirstName] = useState("Beatriz");
   const [lastName, setLastName] = useState("Solórzano");
+  // code change - create new state variable
   const [submittedData, setSubmittedData] = useState<NameFormData[]>([]);
 
   function handleFirstNameChange(event: React.ChangeEvent<HTLMInputElement>) {
@@ -131,6 +135,7 @@ function Form() {
     setLastName(event.target.value);
   }
 
+  // code change - updated function to utilize our state variables
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = { firstName: firstName, lastName: lastName };
@@ -140,6 +145,7 @@ function Form() {
     setLastName("");
   }
 
+  // code change - created new variable that maps out the data held in our submittedData state
   const listOfSubmissions = submittedData.map((data, index) => {
     return (
       <div key={index}>
@@ -156,6 +162,7 @@ function Form() {
         <button type="submit">Submit</button>
       </form>
       <h3>Submissions</h3>
+      {/* code change - displays the mapped data */}
       {listOfSubmissions}
     </div>
   );
@@ -247,10 +254,10 @@ return (
 );
 ```
 
-> **Note**: Alternatively, there are some validation attributes features built
-> into HTML forms themselves, such as a [`required` attribute][required], that
-> can prevent users from submitting altogether if a specific input is not filled
-> in correctly. Still, it's good to know how to do these validations by hand in
+> **Note**: Alternatively, there are some validation attributes built into HTML
+> forms themselves, such as a [`required` attribute][required], that can prevent
+> users from submitting altogether if a specific input is not filled in
+> correctly. Still, it's good to know how to do these validations by hand in
 > more complex cases, such as checking that a password meets certain
 > requirements.
 
