@@ -35,6 +35,7 @@ function will be called. We don't have the `handleSubmit` function yet, so let's
 write it out:
 
 ```jsx
+// src/components/Form.js
 function handleSubmit(event) {
   event.preventDefault();
   const formData = {
@@ -47,16 +48,33 @@ function handleSubmit(event) {
 }
 ```
 
-Let's look at each line of code in this function:
+We're missing something though - the typing for the `event` parameter.
+TypeScript rightfully doesn't like that it defaults to the `any` type, so let's
+change that. We can use the IDE trick we learned to figure out what umbrella
+type the `onSubmit` event falls under. Hover over the `onSubmit` attribute in
+the JSX, and we should find that it's a `React.FormEvent` on an
+`HTMLFormElement`.
 
-- `event.preventDefault()`: The default behavior of a form is to
-  [try and submit the form data based on a defined action][], which effectively
-  causes the browser to refresh the page. We didn't (and don't need to) define
-  an action. The result, however, is that the form makes a new request to the
-  current page, causing a refresh. By using `event.preventDefault()`, we stop
-  this behavior from happening.
+Let's type the parameter like so:
 
-[try and submit the form data based on a defined action]: https://www.w3schools.com/html/html_forms.asp
+```ts
+// src/components/Form.js
+function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  // ...
+}
+```
+
+Now, we can look at each line of code in this function:
+
+- `event.preventDefault()`: The default behavior of a form is to [try and submit
+  the form data based on a defined action][], which effectively causes the
+  browser to refresh the page. We didn't (and don't need to) define an action.
+  The result, however, is that the form makes a new request to the current page,
+  causing a refresh. By using `event.preventDefault()`, we stop this behavior
+  from happening.
+
+[try and submit the form data based on a defined action]:
+  https://www.w3schools.com/html/html_forms.asp
 
 - `const formData = { firstName: firstName, lastName: lastName }`: Here, we are
   putting together the current form data into an object using the values stored
@@ -68,19 +86,21 @@ Let's look at each line of code in this function:
   details of how this works just yet, but we can think of
   `sendFormDataSomewhere()` as the code that handles sending our data off. This
   function might be defined in the same form component, or can be passed down as
-  a prop.
-- `setFirstName("")`: if we want to clear the input fields, all we need to do is
-  set state! In a traditional JavaScript form, you might do something like
-  `event.target.reset()` to clear out the form fields. Here, because we are
-  using controlled inputs, setting state to an empty string clears out the
-  values from the input fields once the data has been submitted.
+  a prop, as shown in our example.
+- `setFirstName("")`: if we want to clear the input fields after the user
+  submits something, all we need to do is set state! In a traditional JavaScript
+  or TypeScript form, you might do something like `event.target.reset()` to
+  clear out the form fields. Here, because we are using controlled inputs,
+  setting state to an empty string clears out the values from the input fields
+  once the data has been submitted.
 
 You can contrast this to handling an _uncontrolled_ form being submitted, in
-which case you would need to access the input fields from the DOM instead
-of accessing the values from state:
+which case you would need to access the input fields from the DOM instead of
+accessing the values from state:
 
 ```jsx
-function handleSubmit(event) {
+// src/components/Form.js
+function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
   event.preventDefault();
   // in an uncontrolled form, you need to access the input fields from the DOM
   const formData = {
@@ -92,27 +112,31 @@ function handleSubmit(event) {
 ```
 
 Since we don't have a server to send our data to, let's remove our
-`sendFormDataSomewhere()` function. Instead, we'll demonstrate submission by
-modifying our `Form` component to access submitted values from state and list
-them in the DOM:
+`sendFormDataSomewhere()` function, the `Form` component's `props` parameter,
+and the `Props` interface. Instead, we'll demonstrate submission by modifying
+our `Form` component to access submitted values from state and list them in the
+DOM:
 
 ```jsx
-import React, { useState } from "react";
+// src/components/Form.js
+import { useState } from "react";
 
-function Form() {
-  const [firstName, setFirstName] = useState("Sylvia");
-  const [lastName, setLastName] = useState("Woods");
-  const [submittedData, setSubmittedData] = useState([]);
+function Form() { /* code change, remove props */
+  const [firstName, setFirstName] = useState("Beatriz");
+  const [lastName, setLastName] = useState("Solórzano");
+  // code change - create new state variable
+  const [submittedData, setSubmittedData] = useState<NameFormData[]>([]);
 
-  function handleFirstNameChange(event) {
+  function handleFirstNameChange(event: React.ChangeEvent<HTLMInputElement>) {
     setFirstName(event.target.value);
   }
 
-  function handleLastNameChange(event) {
+  function handleLastNameChange(event: React.ChangeEvent<HTMLInputElement>) {
     setLastName(event.target.value);
   }
 
-  function handleSubmit(event) {
+  // code change - updated function to utilize our state variables
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = { firstName: firstName, lastName: lastName };
     const dataArray = [...submittedData, formData];
@@ -121,6 +145,7 @@ function Form() {
     setLastName("");
   }
 
+  // code change - created new variable that maps out the data held in our submittedData state
   const listOfSubmissions = submittedData.map((data, index) => {
     return (
       <div key={index}>
@@ -137,6 +162,7 @@ function Form() {
         <button type="submit">Submit</button>
       </form>
       <h3>Submissions</h3>
+      {/* code change - displays the mapped data */}
       {listOfSubmissions}
     </div>
   );
@@ -145,24 +171,50 @@ function Form() {
 export default Form;
 ```
 
-The above component will render previous form submissions on the page! We have
-a fully functioning controlled form.
+> **Note**: You may also have to remove the prop being passed down to `Form` in
+> the parent `App` component to appease TypeScript.
+
+The above component will render previous form submissions on the page! We have a
+fully functioning controlled form.
+
+Before we move on, let's address the following line:
+
+```ts
+const [submittedData, setSubmittedData] = useState<NameFormData[]>([]);
+```
+
+Here, we had to explicitly type our state because when initializing state with
+an empty array in React, type inference assumes the array has a type called
+[`never`](https://www.typescriptlang.org/docs/handbook/2/functions.html#never).
+
+To avoid that, we explicitly type our `submittedData` as an array made up of
+`NameFormData` typed objects. You may have noticed that type in the original
+starter code as well - where did that come from? If we look at the top of the
+file, we'll see it's being imported from a `types.ts` file. Opening that file
+will reveal the `NameFormData` interface.
+
+In this case, we defined the interface in a separate file because it's also
+being used in `App.tsx`. To avoid redundant definitions of the same exact
+interface, we instead opted to define it in a singular file that gets imported
+where needed. You may find yourself having to do so when your projects get
+bigger and data gets passed around.
 
 ## Validating Inputs
 
 One benefit we get from having our form's input values held in state is an easy
 way to perform validations when the form is submitted. For example, let's say we
-want to require that a user enter some data into our form fields before they
-can submit the form successfully.
+want to require that a user enter some data into our form fields before they can
+submit the form successfully.
 
 In our `handleSubmit` function, we can add some validation logic to check if the
 form inputs have the required data, and hold some error messages in state:
 
 ```jsx
 // add state for holding error messages
-const [errors, setErrors] = useState([]);
+// we MUST explicitly type our state array here since we're initializing it as an empty array
+const [errors, setErrors] = useState<string[]>([]);
 
-function handleSubmit(event) {
+function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
   event.preventDefault();
   // first name is required
   if (firstName.length > 0) {
@@ -202,6 +254,13 @@ return (
 );
 ```
 
+> **Note**: Alternatively, there are some validation attributes built into HTML
+> forms themselves, such as a [`required` attribute][required], that can prevent
+> users from submitting altogether if a specific input is not filled in
+> correctly. Still, it's good to know how to do these validations by hand in
+> more complex cases, such as checking that a password meets certain
+> requirements.
+
 ## Conclusion
 
 By setting up our form components using controlled inputs, we give React state
@@ -214,3 +273,9 @@ submitted.
 ## Resources
 
 - [React Forms](https://reactjs.org/docs/forms.html)
+- [Using built-in Form Validation][validation]
+
+[required]:
+  https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/required
+[validation]:
+  https://developer.mozilla.org/en-US/docs/Learn/Forms/Form_validation#using_built-in_form_validation
